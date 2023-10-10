@@ -5,9 +5,7 @@
  */
 int main(void)
 {
-	char myString[] = "_putchar";
-
-	puts(myString);
+	printf("_putchar\n");
 
 	return (0);
 }
