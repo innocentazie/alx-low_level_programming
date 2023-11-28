@@ -1,4 +1,5 @@
 #include "main.h"
+#include <stdio.h>
 
 #define BUFFER_SIZE 1024
 
@@ -6,20 +7,19 @@
  * error_file - handles file-related errors and exits accordingly.
  * @file_from: file descriptor for file_from.
  * @file_to: file descriptor for file_to.
- * @argv: arguments vector.
  *
- * Description: Exits with appropriate error codes based on file operations.
+ * Description: exits with appropriate error codes based on file operations.
  */
-void error_file(int file_from, int file_to, char *argv[])
+void error_file(int file_from, int file_to)
 {
 	if (file_from == -1)
 	{
-		dprintf(STDERR_FILENO, "Error: Can't read from file %s\n", argv[1]);
+		dprintf(STDERR_FILENO, "Error: Can't read from file\n");
 		exit(98);
 	}
 	if (file_to == -1)
 	{
-		dprintf(STDERR_FILENO, "Error: Can't write to %s\n", argv[2]);
+		dprintf(STDERR_FILENO, "Error: Can't write to file\n");
 		exit(99);
 	}
 }
@@ -37,9 +37,12 @@ int open_files(char *file_from, char *file_to)
 {
 	int file_from_fd = open(file_from, O_RDONLY);
 	int file_to_fd = open(file_to, O_CREAT | O_WRONLY | O_TRUNC,
-			S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+				S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
 
-	error_file(file_from_fd, file_to_fd, (char *[]){file_from, file_to});
+	if (file_from_fd == -1 || file_to_fd == -1)
+	{
+		error_file(file_from_fd, file_to_fd);
+	}
 
 	return (file_to_fd);
 }
@@ -59,14 +62,14 @@ void copy_file_content(int file_from_fd, int file_to_fd)
 	while ((nchars = read(file_from_fd, buf, BUFFER_SIZE)) > 0)
 	{
 		if (nchars == -1)
-			error_file(-1, 0, NULL);
+			error_file(-1, 0);
 		nwr = write(file_to_fd, buf, nchars);
 		if (nwr == -1)
-			error_file(0, -1, NULL);
+			error_file(0, -1);
 	}
 
 	if (nchars == -1)
-		error_file(-1, 0, NULL);
+		error_file(-1, 0);
 }
 
 /**
@@ -83,14 +86,14 @@ void close_files(int file_from_fd, int file_to_fd)
 	err_close = close(file_from_fd);
 	if (err_close == -1)
 	{
-		dprintf(STDERR_FILENO, "Error: Can't close fd %d\n", file_from_fd);
+		dprintf(STDERR_FILENO, "Error: Can't close source file\n");
 		exit(100);
 	}
 
 	err_close = close(file_to_fd);
 	if (err_close == -1)
 	{
-		dprintf(STDERR_FILENO, "Error: Can't close fd %d\n", file_to_fd);
+		dprintf(STDERR_FILENO, "Error: Can't close destination file\n");
 		exit(100);
 	}
 }
@@ -105,14 +108,15 @@ void close_files(int file_from_fd, int file_to_fd)
  */
 int main(int argc, char *argv[])
 {
+	int file_to_fd;
+
 	if (argc != 3)
 	{
 		dprintf(STDERR_FILENO, "Usage: cp file_from file_to\n");
 		exit(97);
 	}
 
-	int file_to_fd = open_files(argv[1], argv[2]);
-
+	file_to_fd = open_files(argv[1], argv[2]);
 	copy_file_content(file_to_fd, file_to_fd);
 	close_files(file_to_fd, file_to_fd);
 
